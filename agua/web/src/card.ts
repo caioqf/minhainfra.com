@@ -245,10 +245,18 @@ export function abrirCompartilhar(versoes: { rotulo: string; cv: HTMLCanvasEleme
     document.body.appendChild(modal)
   }
   let atual = 0
+  let story = false
+  const stories = new Map<number, HTMLCanvasElement>()
+  const canvasAtual = () => {
+    if (!story) return versoes[atual].cv
+    if (!stories.has(atual)) stories.set(atual, paraStory(versoes[atual].cv))
+    return stories.get(atual)!
+  }
   modal.innerHTML = `<div class="metodo-caixa compartilhar-caixa" role="dialog" aria-label="Compartilhar">
       <button class="fechar" aria-label="Fechar">×</button>
       <h2>Compartilhar</h2>
       ${versoes.length > 1 ? `<nav class="seg compartilhar-versoes" aria-label="Versão da imagem">${versoes.map((v, i) => `<button data-v="${i}" class="${i === 0 ? 'on' : ''}">${v.rotulo}</button>`).join('')}</nav>` : ''}
+      <nav class="seg compartilhar-formato" aria-label="Formato"><button data-f="feed" class="on">Feed</button><button data-f="story">Story</button></nav>
       <div class="compartilhar-previa"><img alt="Prévia da imagem para compartilhar" /></div>
       <div class="compartilhar-acoes">
         <button class="pill principal" data-a="share">Compartilhar imagem</button>
@@ -260,7 +268,7 @@ export function abrirCompartilhar(versoes: { rotulo: string; cv: HTMLCanvasEleme
   const img = modal.querySelector<HTMLImageElement>('.compartilhar-previa img')!
   const mostrar = (i: number) => {
     atual = i
-    img.src = versoes[i].cv.toDataURL('image/png')
+    img.src = canvasAtual().toDataURL('image/png')
     modal!.querySelectorAll<HTMLElement>('[data-v]').forEach((b) => b.classList.toggle('on', +b.dataset.v! === i))
   }
   mostrar(0)
@@ -274,12 +282,19 @@ export function abrirCompartilhar(versoes: { rotulo: string; cv: HTMLCanvasEleme
     if (alvo === modal || alvo.closest('.fechar')) return fechar()
     const v = alvo.closest<HTMLElement>('[data-v]')
     if (v) { mostrar(+v.dataset.v!); msg.textContent = ''; return }
+    const fm = alvo.closest<HTMLElement>('[data-f]')
+    if (fm) {
+      story = fm.dataset.f === 'story'
+      modal!.querySelectorAll<HTMLElement>('[data-f]').forEach((b) => b.classList.toggle('on', b === fm))
+      mostrar(atual); msg.textContent = ''; return
+    }
     const a = alvo.closest<HTMLElement>('[data-a]')?.dataset.a
     if (!a) return
-    const cv = versoes[atual].cv
+    const cv = canvasAtual()
+    const arquivo = story ? nomeArquivo.replace(/\.png$/, '-story.png') : nomeArquivo
     const blob = await new Promise<Blob | null>((r) => cv.toBlob(r, 'image/png'))
     if (a === 'share') {
-      const file = blob ? new File([blob], nomeArquivo, { type: 'image/png' }) : null
+      const file = blob ? new File([blob], arquivo, { type: 'image/png' }) : null
       try {
         if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text: `${textoCompartilhar} ${url}` })
         else if (navigator.share) await navigator.share({ text: textoCompartilhar, url })
@@ -289,7 +304,7 @@ export function abrirCompartilhar(versoes: { rotulo: string; cv: HTMLCanvasEleme
       const u = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = u
-      link.download = nomeArquivo
+      link.download = arquivo
       link.click()
       setTimeout(() => URL.revokeObjectURL(u), 2000)
       msg.textContent = 'Imagem baixada.'
@@ -297,6 +312,19 @@ export function abrirCompartilhar(versoes: { rotulo: string; cv: HTMLCanvasEleme
       msg.textContent = (await copiar(url)) ? 'Link copiado.' : url
     }
   }
+}
+
+/** Versão para story do Instagram (1080 x 1920): o card no meio, com a cor de fundo nas faixas de cima e de baixo,
+ *  que é onde o Instagram põe a barra de progresso e o campo de resposta. */
+function paraStory(cv: HTMLCanvasElement) {
+  const s = document.createElement('canvas')
+  s.width = 1080
+  s.height = 1920
+  const c = s.getContext('2d')!
+  c.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim()
+  c.fillRect(0, 0, s.width, s.height)
+  c.drawImage(cv, (s.width - cv.width) / 2, (s.height - cv.height) / 2)
+  return s
 }
 
 async function copiar(t: string) {

@@ -459,7 +459,7 @@ a { color: inherit; }
 .compartilhar-caixa h2 { margin-top: 0; }
 .compartilhar-previa img { display: block; width: 100%; max-height: 56vh; object-fit: contain; border-radius: 6px; border: 1px solid var(--line-2); background: var(--panel-2); }
 .compartilhar-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.compartilhar-acoes .pill { cursor: pointer; }
+.compartilhar-acoes .pill { cursor: pointer; display: inline-flex; } /* no celular .pill some do topo, mas aqui precisa aparecer */
 .compartilhar-acoes .pill.principal { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 @media (max-width: 760px) {
   .pill.compart { display: inline-flex; width: 34px; padding: 0; }
@@ -474,6 +474,8 @@ a { color: inherit; }
 .foto figcaption a { color: rgba(255, 255, 255, 0.92); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .foto figcaption a:hover { text-decoration: underline; }
 .compartilhar-versoes { display: inline-flex; margin-bottom: 12px; }
+.compartilhar-formato { display: inline-flex; margin-bottom: 12px; }
+.compartilhar-versoes + .compartilhar-formato { margin-left: 8px; }
 
 /* ---------- abas entre as seções ---------- */
 .secoes { display: flex; gap: 2px; padding: 3px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); }
