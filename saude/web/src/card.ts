@@ -154,7 +154,7 @@ export async function desenharCard(o: CardOpts): Promise<HTMLCanvasElement> {
     if (o.mapa.zoom) {
       // recorte arredondado: os vizinhos não vazam para fora do quadro
       c.beginPath()
-      c.roundRect(area[0][0], area[0][1], area[1][0] - area[0][0], area[1][1] - area[0][1], 18)
+      c.roundRect(area[0][0], area[0][1], area[1][0] - area[0][0], area[1][1] - area[0][1], 8)
       c.clip()
       c.fillStyle = cor.sem
       c.globalAlpha = 0.35

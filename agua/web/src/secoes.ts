@@ -14,14 +14,24 @@ export function montarSecoes(atual: string) {
   if (!nav) return
   nav.innerHTML = SECOES.map((s) => `<a href="../${s.id}/" data-s="${s.id}" class="${s.id === atual ? 'on' : ''}" ${s.id === atual ? 'aria-current="page"' : ''} title="${s.nome}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${s.icone}" fill="${s.cor}" fill-rule="evenodd" /></svg><span>${s.nome}</span></a>`).join('')
-  // leva a cidade (m) ou o estado (uf) para a outra seção; ano, mês e camada são de cada seção e ficam para trás
-  nav.addEventListener('click', (e) => {
-    const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-s]')
-    if (!a || a.dataset.s === atual) { if (a) e.preventDefault(); return }
+  // leva a cidade (m) ou o estado (uf) para a outra seção; ano, mês e camada são de cada seção e ficam para trás.
+  // O link é atualizado já ao passar o mouse: assim a página pré-carregada é a mesma que abre no clique.
+  const atualizar = (a: HTMLAnchorElement) => {
     const p = new URLSearchParams(location.hash.slice(1))
     const q = new URLSearchParams()
     if (p.get('m')) q.set('m', p.get('m')!)
     else if (p.get('uf')) q.set('uf', p.get('uf')!)
     a.href = `../${a.dataset.s}/${q.toString() ? '#' + q : ''}`
+  }
+  for (const ev of ['pointerenter', 'focusin', 'touchstart'] as const) {
+    nav.addEventListener(ev, (e) => {
+      const a = (e.target as HTMLElement).closest?.<HTMLAnchorElement>('a[data-s]')
+      if (a && a.dataset.s !== atual) atualizar(a)
+    }, { capture: true, passive: true })
+  }
+  nav.addEventListener('click', (e) => {
+    const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-s]')
+    if (!a || a.dataset.s === atual) { if (a) e.preventDefault(); return }
+    atualizar(a)
   })
 }
