@@ -5,6 +5,8 @@ import type { Topology, GeometryCollection } from 'topojson-specification'
 import { carregar, ficha, UF_COD, UF_NOME, type Brasil, type MapaDados, type Meta, type Causa, type Limite } from './dados'
 import { Mapa } from './mapa'
 import { barras } from './graficos'
+import { desenharCard, abrirCompartilhar, type CardOpts } from './card'
+import { arquivoFoto, carregarImagem, creditoFoto, preencherFoto, urlFoto, urlOriginal } from './foto'
 import * as f from './fmt'
 
 type Sel = { tipo: 'br' } | { tipo: 'uf'; uf: string } | { tipo: 'mun'; i: number }
@@ -139,7 +141,7 @@ async function iniciar() {
     tip.innerHTML = `<div class="t">${f.esc(mapa.nomes[i])}</div><div class="s">${UF_NOME[mapa.ufs[i]]} · ${per}</div>` +
       (v == null
         ? `<div class="aviso">Sem registros neste período. Áreas atendidas por cooperativas não entram na base da ANEEL.</div>`
-        : `<div class="v">${f.horasNum(v)}<small>horas sem luz por consumidor</small></div>
+        : `<div class="v">${f.horasNum(v)}<small>horas sem energia por consumidor</small></div>
            <div class="r"><span>${f.int(quedasMun(i))} interrupções</span>${va ? `<span class="var ${v > va ? 'up' : 'down'}">${f.pct(v / va - 1)} vs ${st.janela === 12 ? '12 meses antes' : 'ano anterior'}</span>` : ''}</div>`)
     posicionarTip(x, y)
   }
@@ -149,7 +151,7 @@ async function iniciar() {
     if (r == null) return cab + `<div class="aviso">Sem dado de limite para este município. Áreas de cooperativas e conjuntos sem correspondência ficam de fora.</div>`
     const ano = +anoDe[st.t]
     const comp = lim!.munAno[i].find((x) => x[0] === ano)
-    return cab + `<div class="v">${f.int(r)}%<small>do limite de horas sem luz da ANEEL</small></div>
+    return cab + `<div class="v">${f.int(r)}%<small>do limite de horas sem energia da ANEEL</small></div>
       <div class="r"><span class="selo ${r > 100 ? 'acima' : 'dentro'}">${r > 100 ? 'acima do limite' : 'dentro do limite'}</span>${comp?.[3] != null ? `<span>${f.reais(comp[3])} em compensações em ${ano}*</span>` : ''}</div>
       ${comp?.[3] != null ? '<div class="aviso">* estimativa: compensações da área de atendimento repartidas entre os municípios</div>' : ''}`
   }
@@ -195,14 +197,14 @@ async function iniciar() {
   // ---------- legenda ----------
   function desenharLegenda() {
     if (ehLim()) {
-      $('#legenda').innerHTML = `<div class="tit">Horas sem luz em 12 meses, em % do limite da ANEEL</div>
+      $('#legenda').innerHTML = `<div class="tit">Horas sem energia em 12 meses, em % do limite da ANEEL</div>
         <div class="esc">${rampaL.map((c) => `<span style="background:${c}"></span>`).join('')}</div>
         <div class="rot"><span></span>${FAIXAS_LIM.map((v) => `<span>${v}</span>`).join('')}</div>
         <div class="lados"><span>dentro do limite</span><span>acima</span></div>`
       return
     }
     const fx = FAIXAS[st.janela]
-    $('#legenda').innerHTML = `<div class="tit">Horas sem luz por consumidor${st.janela === 12 ? ', em 12 meses' : ', no mês'}</div>
+    $('#legenda').innerHTML = `<div class="tit">Horas sem energia por consumidor${st.janela === 12 ? ', em 12 meses' : ', no mês'}</div>
       <div class="esc">${rampa.slice(0, 7).map((c) => `<span style="background:${c}"></span>`).join('')}</div>
       <div class="rot"><span></span>${fx.map((v) => `<span>${v < 1 ? f.int(v * 60) + 'm' : v}</span>`).join('')}</div>`
   }
@@ -308,7 +310,7 @@ async function iniciar() {
       <div class="kpis">
         <div class="kpi"><div class="v">${varia}</div><div class="l">vs ${st.janela === 12 ? '12 meses antes' : 'mesmo mês do ano anterior'}</div></div>
         <div class="kpi"><div class="v">${f.compacto(n)}</div><div class="l">interrupções</div></div>
-        ${af != null ? `<div class="kpi"><div class="v">${f.compacto(af)}</div><div class="l">vezes que alguém ficou sem luz</div></div>` : ''}
+        ${af != null ? `<div class="kpi"><div class="v">${f.compacto(af)}</div><div class="l">vezes que alguém ficou sem energia</div></div>` : ''}
       </div>`
   }
   function renderHeroLimite() {
@@ -362,7 +364,7 @@ async function iniciar() {
     const dist = (L.distAno[ano] ?? []).filter((d) => d.n >= 300000).map((d) => ({ ...d, r: (d.dec / d.lim) * 100 })).sort((a, b) => b.r - a.r).slice(0, 10)
     const maxD = Math.max(150, dist[0]?.r ?? 0)
     $('#painel-esq').innerHTML = `
-      <div class="bloco"><h2>Brasil, % do limite</h2><p class="sub">Horas sem luz em 12 meses ÷ limite</p><div id="g-br"></div></div>
+      <div class="bloco"><h2>Brasil, % do limite</h2><p class="sub">Horas sem energia em 12 meses ÷ limite</p><div id="g-br"></div></div>
       <div class="bloco"><h3>Estados</h3><p class="sub">% do limite, 12 meses até ${f.mes(mapa.meses[t])}</p>
         <ul class="rank" id="rank-uf">${ufs.map((d) => `<li data-uf="${d.uf}" class="${d.uf === selUf ? 'on' : ''}"><span class="tag">${d.uf}</span><span class="barra"><i style="width:${(d.v / maxUf) * 100}%;background:${corLim(d.v)}"></i></span><span class="val">${f.int(d.v)}%</span></li>`).join('')}</ul></div>
       <div class="bloco"><h3>Distribuidoras em ${ano}</h3><p class="sub">% do limite e compensações pagas, acima de 300 mil clientes</p>
@@ -421,10 +423,10 @@ async function iniciar() {
     if (s.tipo === 'br') {
       const A = brasil.anos[ano]
       html = `<div class="titulo-sel"><div><h2>Brasil</h2><div class="trilha-sel">${f.compacto(meta.consumidores)} consumidores · ${f.int(N)} municípios</div></div></div>
-        ${ehLim() && lim?.brConsAcima[t] != null ? `<div class="big">${f.int(lim.brConsAcima[t]! * 100)}%<small>dos consumidores em área acima do limite da ANEEL, 12 meses até ${f.mes(mapa.meses[t])}</small></div>` : `<div class="big">${f.horasNum(valorBr())}<small>horas sem luz por consumidor ${per}</small></div>`}
+        ${ehLim() && lim?.brConsAcima[t] != null ? `<div class="big">${f.int(lim.brConsAcima[t]! * 100)}%<small>dos consumidores em área acima do limite da ANEEL, 12 meses até ${f.mes(mapa.meses[t])}</small></div>` : `<div class="big">${f.horasNum(valorBr())}<small>horas sem energia por consumidor ${per}</small></div>`}
         ${ehLim() ? blocoLimite() : ''}
-        <div class="bloco"><h3>Por que faltou luz em ${ano}</h3><p class="sub">Parcela do tempo total sem energia, por causa informada pela distribuidora</p>${listaCausas(A?.causas ?? [])}</div>
-        <div class="bloco"><h3>Maiores apagões de ${ano}</h3><p class="sub">Eventos que somaram mais horas sem luz (consumidores × duração)</p>
+        <div class="bloco"><h3>Por que faltou energia em ${ano}</h3><p class="sub">Parcela do tempo total sem energia, por causa informada pela distribuidora</p>${listaCausas(A?.causas ?? [])}</div>
+        <div class="bloco"><h3>Maiores apagões de ${ano}</h3><p class="sub">Eventos que somaram mais horas sem energia (consumidores × duração)</p>
           <ul class="eventos">${(A?.maiores ?? []).slice(0, 8).map((e) => {
             const i = e.cod != null ? idxCod.get(e.cod) : undefined
             const onde = i != null ? `${mapa.nomes[i]} (${mapa.ufs[i]})` : e.conj
@@ -440,12 +442,12 @@ async function iniciar() {
       for (let i = 0; i < N; i++) if (mapa.ufs[i] === s.uf) { const v = valorMun(i); if (v != null) muns.push({ i, v }) }
       muns.sort((a, b) => b.v - a.v)
       const ordemAlfa = Object.keys(UF_NOME).sort((a, b) => UF_NOME[a].localeCompare(UF_NOME[b]))
-      html = `<div class="titulo-sel"><div><h2>${UF_NOME[s.uf]}</h2><div class="trilha-sel">${pos}º estado com mais horas sem luz · ${f.int(muns.length)} municípios com dados</div></div>
+      html = `<div class="titulo-sel"><div><h2>${UF_NOME[s.uf]}</h2><div class="trilha-sel">${pos}º estado com mais horas sem energia · ${f.int(muns.length)} municípios com dados</div></div>
           <div class="nav"><button data-uf="${ordemAlfa[(ordemAlfa.indexOf(s.uf) + 26) % 27]}" aria-label="Estado anterior">‹</button><button data-uf="${ordemAlfa[(ordemAlfa.indexOf(s.uf) + 1) % 27]}" aria-label="Próximo estado">›</button></div></div>
         <div class="big">${f.horasNum(valorUf(s.uf))}<small>horas por consumidor ${per}</small></div>
         ${ehLim() ? blocoLimite() : ''}
         <div class="bloco"><h3>Mês a mês</h3><div id="g-sel"></div></div>
-        <div class="bloco"><h3>Onde mais faltou luz</h3><p class="sub">Municípios ${per}</p>${listaMuns(muns.slice(0, 10))}</div>
+        <div class="bloco"><h3>Onde mais faltou energia</h3><p class="sub">Municípios ${per}</p>${listaMuns(muns.slice(0, 10))}</div>
         <div class="bloco"><h3>Onde menos faltou</h3>${listaMuns(muns.slice(-5).reverse())}</div>
         ${ehLim() ? '' : blocoLimite()}`
     } else {
@@ -460,9 +462,9 @@ async function iniciar() {
       naUf.sort((a, b) => b - a)
       const pos = v != null ? naUf.indexOf(v) + 1 : 0
       const anos = Object.entries(fc.anos).filter(([a]) => meta.anos.includes(a)).sort()
-      html = `<div class="titulo-sel"><div><h2>${f.esc(fc.nome)}</h2><div class="trilha-sel">${UF_NOME[fc.uf]}${fc.dist.length ? ' · ' + fc.dist.map((d) => f.esc(d.sig)).join(', ') : ''}</div></div></div>
-        <div class="big">${v == null ? '–' : f.horasNum(v)}<small>horas sem luz por consumidor ${per}</small></div>
-        ${v != null ? `<p class="nota">${pos}º de ${naUf.length} em ${UF_NOME[fc.uf]} (1º = mais tempo sem luz). Cerca de ${f.compacto(fc.dom)} consumidores estimados.</p>` : '<p class="nota">Sem registros neste período. Áreas atendidas por cooperativas não entram na base da ANEEL.</p>'}
+      html = `<figure class="foto"></figure><div class="titulo-sel"><div><h2>${f.esc(fc.nome)}</h2><div class="trilha-sel">${UF_NOME[fc.uf]}${fc.dist.length ? ' · ' + fc.dist.map((d) => f.esc(d.sig)).join(', ') : ''}</div></div></div>
+        <div class="big">${v == null ? '–' : f.horasNum(v)}<small>horas sem energia por consumidor ${per}</small></div>
+        ${v != null ? `<p class="nota">${pos}º de ${naUf.length} em ${UF_NOME[fc.uf]} (1º = mais tempo sem energia). Cerca de ${f.compacto(fc.dom)} consumidores estimados.</p>` : '<p class="nota">Sem registros neste período. Áreas atendidas por cooperativas não entram na base da ANEEL.</p>'}
         ${blocoLimite()}
         <div class="bloco"><h3>Mês a mês</h3><div id="g-sel"></div></div>
         <div class="bloco"><h3>Ano a ano</h3><p class="sub">Horas por consumidor${anos.some(([a]) => a < '2026') ? ', estimadas para anos anteriores a 2026' : ''}</p><div id="g-anos"></div></div>
@@ -471,6 +473,7 @@ async function iniciar() {
           <ul class="eventos">${fc.piores.map((e) => `<li><span class="q">${f.int(e.af)} consumidores</span><span class="h">${f.horas(e.h)}</span>
             <span class="d">${f.dataHora(e.ini)} · ${f.esc(e.detalhe ?? e.causa ?? 'causa não informada')}${e.local ? ' · ' + f.esc(e.local) : ''} · ${f.esc(e.sig)}</span></li>`).join('') || '<li><span class="d">Nenhuma registrada.</span></li>'}</ul></div>`
       el.innerHTML = html
+      preencherFoto(el.querySelector('figure.foto'), fc.cod, fc.nome)
       const anosEl = el.querySelector<HTMLElement>('#g-anos')
       if (anosEl && anos.length) {
         const ultimoAno = meta.anos[meta.anos.length - 1]
@@ -499,7 +502,7 @@ async function iniciar() {
 
   // ---------- limite da ANEEL e compensações ----------
   const EXPLICA = `<div class="explica">
-      <p><b>O que é o limite.</b> A ANEEL fixa, para cada área de atendimento, um máximo anual de horas sem luz (o DEC). No DEC oficial não entram tempestades e emergências, por isso ele é menor que as horas do mapa.</p>
+      <p><b>O que é o limite.</b> A ANEEL fixa, para cada área de atendimento, um máximo anual de horas sem energia (o DEC). No DEC oficial não entram tempestades e emergências, por isso ele é menor que as horas do mapa.</p>
       <p><b>Compensação.</b> Também há limites para cada consumidor (DIC, FIC e DMIC). Se o seu passou, a distribuidora tem de dar um crédito na conta de luz, sem você pedir (PRODIST, Módulo 8). Se acha que deveria ter recebido e não recebeu, reclame na distribuidora e depois na ANEEL, pelo 167.</p>
     </div>`
   function linhasLimite(rows: { a: string; dec: number; lim: number; reais: number | null; meses?: number }[]) {
@@ -590,14 +593,14 @@ async function iniciar() {
   const metodo = $('#metodo')
   $('#metodo-corpo').innerHTML = `<h2>Como medimos</h2>
     <p>Todos os números vêm do conjunto de dados <a href="https://dadosabertos.aneel.gov.br/dataset/interrupcoes-de-energia-eletrica-nas-redes-de-distribuicao" target="_blank" rel="noopener">Interrupções de Energia Elétrica nas Redes de Distribuição</a>, publicado pela ANEEL, com cada interrupção registrada pelas distribuidoras desde ${f.mesLongo(mapa.meses[0])}. (A base de 2017 está incompleta e ficou de fora.) Dados até ${f.mesLongo(mapa.meses[ultimo])}, processados em ${f.data(meta.gerado)}.</p>
-    <h3>Horas sem luz por consumidor</h3>
+    <h3>Horas sem energia por consumidor</h3>
     <p>Para cada interrupção multiplicamos os consumidores atingidos pela duração. A soma dessas horas é dividida pelo número de consumidores do lugar. É a mesma ideia do DEC, o indicador oficial da ANEEL.</p>
     <h3>Por que o número é maior que o DEC oficial</h3>
-    <p>O DEC oficial desconta eventos considerados fora do controle da distribuidora, como situações de emergência e dias críticos (tempestades fortes, por exemplo). Aqui eles entram, porque quem ficou sem luz ficou sem luz. Só tiramos registros que não são falta de energia na rede: ${meta.excluidos.map((x) => x.toLowerCase()).join('; ')}. Durações acima de ${meta.maxHoras / 24} dias são tratadas como erro de registro.</p>
+    <p>O DEC oficial desconta eventos considerados fora do controle da distribuidora, como situações de emergência e dias críticos (tempestades fortes, por exemplo). Aqui eles entram, porque quem ficou sem energia ficou sem energia. Só tiramos registros que não são falta de energia na rede: ${meta.excluidos.map((x) => x.toLowerCase()).join('; ')}. Durações acima de ${meta.maxHoras / 24} dias são tratadas como erro de registro.</p>
     <h3>Consumidores por município</h3>
     <p>A ANEEL não publica quantos consumidores cada município tem. Estimamos usando os domicílios do Censo 2022 (IBGE), multiplicados por ${String(meta.fatorConsumidorDomicilio).replace('.', ',')}, a proporção entre os ${f.compacto(meta.consumidores)} consumidores ativos informados à ANEEL e os domicílios do país.</p>
     <h3>Antes de 2026</h3>
-    <p>Até 2025 a base indicava só o conjunto de consumidores (a área de atendimento), não o município. Distribuímos o tempo sem luz de cada conjunto entre os municípios na mesma proporção observada em 2026. Isso cobre ${meta.coberturaAntigo ? f.int(meta.coberturaAntigo * 100) : '–'}% das horas registradas; o resto entra nos totais do Brasil e das distribuidoras, mas não no mapa. Os arquivos antigos da ANEEL trazem linhas repetidas, que removemos.</p>
+    <p>Até 2025 a base indicava só o conjunto de consumidores (a área de atendimento), não o município. Distribuímos o tempo sem energia de cada conjunto entre os municípios na mesma proporção observada em 2026. Isso cobre ${meta.coberturaAntigo ? f.int(meta.coberturaAntigo * 100) : '–'}% das horas registradas; o resto entra nos totais do Brasil e das distribuidoras, mas não no mapa. Os arquivos antigos da ANEEL trazem linhas repetidas, que removemos.</p>
     <h3>Limite da ANEEL e compensações</h3>
     <p>Vêm do conjunto <a href="https://dadosabertos.aneel.gov.br/dataset/indicadores-coletivos-de-continuidade-dec-e-fec" target="_blank" rel="noopener">Indicadores Coletivos de Continuidade</a>: o DEC oficial de cada área de atendimento mês a mês, o limite anual fixado pela ANEEL e o valor das compensações pagas. Na camada "Limite ANEEL", somamos o DEC dos últimos 12 meses e comparamos com o limite proporcional a esses meses. Quando a distribuidora ainda não publicou o mês mais recente, repetimos o último disponível (até 2 meses). Para municípios, as áreas são repartidas como no histórico antes de 2026, então valores de município são estimativas. Compensações só a partir de 2022, quando a série mensal fica completa.</p>
     <h3>O que não está aqui</h3>
@@ -606,6 +609,68 @@ async function iniciar() {
   $('#btn-metodo').addEventListener('click', () => (metodo.hidden = false))
   $('#metodo-fechar').addEventListener('click', () => (metodo.hidden = true))
   metodo.addEventListener('click', (e) => { if (e.target === metodo) metodo.hidden = true })
+
+  // ---------- compartilhar ----------
+  async function compartilhar() {
+    const s = st.sel
+    const hero = $('#hero')
+    const numEl = hero.querySelector('.num')
+    const numero = numEl?.firstChild?.textContent?.trim() ?? ''
+    const unidade = numEl?.querySelector('small')?.textContent?.trim() ?? ''
+    const frase = hero.querySelector('.frase b')?.textContent?.trim() ?? ''
+    const periodo = hero.querySelector('.frase span')?.textContent?.trim() ?? ''
+    const destaques = [...hero.querySelectorAll('.kpi')].map((k) => `${k.querySelector('.v')?.textContent?.trim()} ${k.querySelector('.l')?.textContent?.trim()}`)
+    let lugar = 'Brasil', sublugar = `${f.compacto(meta.consumidores)} consumidores · ${f.int(N)} municípios`
+    let idx: number[] = []
+    let contornos = fcUf.features
+    let destaque: Feature<Geometry> | null = null
+    if (s.tipo === 'br') idx = [...Array(N).keys()]
+    else {
+      const uf = s.tipo === 'uf' ? s.uf : mapa.ufs[s.i]
+      // Fernando de Noronha fica longe da costa e encolhe o mapa de PE; só entra se for o município escolhido
+      idx = [...Array(N).keys()].filter((i) => mapa.ufs[i] === uf && (mapa.cods[i] !== 2605459 || (s.tipo === 'mun' && s.i === i)))
+      contornos = fcUf.features.filter((ft) => UF_COD[ft.properties.codarea] === uf)
+      if (s.tipo === 'uf') { lugar = UF_NOME[uf]; sublugar = `${f.int(idx.length)} municípios` }
+      else {
+        lugar = mapa.nomes[s.i]; sublugar = UF_NOME[uf]; destaque = muns[s.i]
+        const v = valorC(s.i)
+        if (v != null && !ehLim()) {
+          const vs = idx.map((i) => valorC(i)).filter((x): x is number => x != null).sort((a, b) => b - a)
+          destaques.unshift(`${vs.indexOf(v) + 1}º de ${vs.length} em ${UF_NOME[uf]} (1º = mais tempo sem energia)`)
+        }
+      }
+    }
+    const leg = $('#legenda')
+    let foto: { img: HTMLImageElement; credito: string } | null = null
+    if (s.tipo === 'mun') {
+      const arq = await arquivoFoto(mapa.cods[s.i])
+      if (arq) {
+        const [img0, cr] = await Promise.all([carregarImagem(urlFoto(arq, 1280)), creditoFoto(arq)])
+        const img = img0 ?? (await carregarImagem(urlOriginal(arq)))
+        if (img) foto = { img, credito: `Foto: ${cr.autor}${cr.licenca ? ` · ${cr.licenca}` : ''} · Wikimedia Commons` }
+      }
+    }
+    // na cidade, o mapa do card é um zoom nos arredores (vale também para vizinhos de outro estado)
+    if (s.tipo === 'mun') { idx = [...Array(N).keys()]; contornos = fcUf.features }
+    const opts: CardOpts = {
+      marca: 'minhainfra · energia', icone: 'raio', lugar, sublugar, numero, unidade, frase, periodo, destaques,
+      legenda: {
+        titulo: leg.querySelector('.tit')?.textContent?.trim() ?? '',
+        cores: [...leg.querySelectorAll<HTMLElement>('.esc span')].map((x) => x.style.background),
+        rotulos: [...leg.querySelectorAll('.rot span')].slice(1).map((x) => x.textContent ?? ''),
+      },
+      mapa: { feats: idx.map((i) => muns[i]), cores: idx.map((i) => cor(valorC(i))), destaque, contornos, zoom: s.tipo === 'mun' },
+      url: location.host.includes('localhost') ? 'minhainfra.com/energia' : `${location.host}${location.pathname}`.replace(/\/$/, ''),
+      fonte: 'Fonte: ANEEL',
+    }
+    // duas versões quando há foto: com a foto da cidade ou com o mapa
+    const versoes = foto
+      ? [{ rotulo: 'Com foto', cv: await desenharCard({ ...opts, foto }) }, { rotulo: 'Com mapa', cv: await desenharCard({ ...opts, foto: null }) }]
+      : [{ rotulo: 'Com mapa', cv: await desenharCard({ ...opts, foto: null }) }]
+    const slug = f.semAcento(lugar).replace(/[^a-z0-9]+/g, '-')
+    abrirCompartilhar(versoes, `minhainfra-energia-${slug}.png`, location.href, `${numero}${unidade === '%' ? '%' : ' ' + unidade} ${frase}, ${periodo}.`)
+  }
+  $('#btn-compartilhar').addEventListener('click', () => { compartilhar().catch((e) => console.error(e)) })
 
   // ---------- teclado ----------
   document.addEventListener('keydown', (e) => {
@@ -634,7 +699,7 @@ async function iniciar() {
     $('#janela').classList.toggle('travado', c === 'limite')
     $('#janela').title = c === 'limite' ? 'O limite da ANEEL é anual: esta camada usa sempre 12 meses' : ''
     document.querySelectorAll<HTMLElement>('#janela button').forEach((x) => x.classList.toggle('on', c === 'limite' ? x.dataset.j === '12' : +x.dataset.j! === st.janela))
-    ;($('#mapa') as HTMLCanvasElement).setAttribute('aria-label', c === 'limite' ? 'Mapa do Brasil por horas sem luz em relação ao limite da ANEEL' : 'Mapa do Brasil por horas sem energia')
+    ;($('#mapa') as HTMLCanvasElement).setAttribute('aria-label', c === 'limite' ? 'Mapa do Brasil por horas sem energia em relação ao limite da ANEEL' : 'Mapa do Brasil por horas sem energia')
     prepararRegua(); desenharLegenda(); mudarT(st.t); renderDir(false)
   }
   $('#camada').addEventListener('click', (e) => {
@@ -660,7 +725,7 @@ async function iniciar() {
     const escuro = getComputedStyle(document.documentElement).colorScheme.includes('dark')
     const novo = escuro ? 'light' : 'dark'
     document.documentElement.dataset.theme = novo
-    try { localStorage.setItem('semluz-tema', novo) } catch { /* sem armazenamento */ }
+    try { localStorage.setItem('minhainfra-tema', novo) } catch { /* sem armazenamento */ }
     lerRampa(); lerRampaL(); mapaCv.lerCores(); desenharLegenda(); desenharChips(); renderDir(false); renderEsq()
   })
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { lerRampa(); lerRampaL(); mapaCv.lerCores(); desenharLegenda(); desenharChips() })

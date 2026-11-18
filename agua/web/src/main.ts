@@ -5,6 +5,8 @@ import type { Topology, GeometryCollection } from 'topojson-specification'
 import { carregar, ficha, UF_COD, UF_NOME, type Brasil, type MapaDados, type Meta, type Resumo } from './dados'
 import { Mapa } from './mapa'
 import { barras } from './graficos'
+import { desenharCard, abrirCompartilhar, type CardOpts } from './card'
+import { arquivoFoto, carregarImagem, creditoFoto, preencherFoto, urlFoto, urlOriginal } from './foto'
 import * as f from './fmt'
 
 type Sel = { tipo: 'br' } | { tipo: 'uf'; uf: string } | { tipo: 'mun'; i: number }
@@ -356,7 +358,7 @@ async function iniciar() {
       const prest = (L?.prest || Object.values(fc.anos).reverse().find((x) => x.prest)?.prest || '').split('|').map((x) => x.replace(/\[\d+\]/, '').trim()).filter(Boolean)
       const linha = (rot: string, val: string | null) => (val == null ? '' : `<li><span class="q">${rot}</span><span class="h">${val}</span></li>`)
       const n = (x: number | null | undefined, fn: (y: number) => string) => (x == null ? null : fn(x))
-      html = `<div class="titulo-sel"><div><h2>${f.esc(fc.nome)}</h2><div class="trilha-sel">${UF_NOME[fc.uf]}${prest.length ? ' · ' + prest.map(f.esc).join(', ') : ''}</div></div></div>
+      html = `<figure class="foto"></figure><div class="titulo-sel"><div><h2>${f.esc(fc.nome)}</h2><div class="trilha-sel">${UF_NOME[fc.uf]}${prest.length ? ' · ' + prest.map(f.esc).join(', ') : ''}</div></div></div>
         <div class="big">${v == null ? '–' : fmtV(v)}<small>${c.curto} por ligação em ${ano()}${st.camada === 'horas' ? ' (estimativa)' : ''}</small></div>
         <p class="nota">${v != null ? `${pos}º de ${naUf.length} em ${UF_NOME[fc.uf]} (1º = mais falta de água).` : motivoSemDado(i)}</p>
         ${grafico('g-1', 'horas', 'Horas sem água por ligação')}
@@ -376,6 +378,7 @@ async function iniciar() {
           </ul></div>` : ''}
         <div class="bloco">${EXPLICA}</div>`
       el.innerHTML = html
+      preencherFoto(el.querySelector('figure.foto'), fc.cod, fc.nome)
     }
     if (anima) { el.scrollTop = 0; el.classList.remove('troca'); void el.offsetWidth; el.classList.add('troca') }
     const marcas = anos.map((a, j) => ({ i: j, t: String(a).slice(2) })).filter((_, j) => j % 2 === 0)
@@ -461,6 +464,68 @@ async function iniciar() {
   $('#btn-metodo').addEventListener('click', () => (metodo.hidden = false))
   $('#metodo-fechar').addEventListener('click', () => (metodo.hidden = true))
   metodo.addEventListener('click', (e) => { if (e.target === metodo) metodo.hidden = true })
+
+  // ---------- compartilhar ----------
+  async function compartilhar() {
+    const s = st.sel
+    const hero = $('#hero')
+    const numEl = hero.querySelector('.num')
+    const numero = numEl?.firstChild?.textContent?.trim() ?? ''
+    const unidade = numEl?.querySelector('small')?.textContent?.trim() ?? ''
+    const frase = hero.querySelector('.frase b')?.textContent?.trim() ?? ''
+    const periodo = hero.querySelector('.frase span')?.textContent?.trim() ?? ''
+    const destaques = [...hero.querySelectorAll('.kpi')].map((k) => `${k.querySelector('.v')?.textContent?.trim()} ${k.querySelector('.l')?.textContent?.trim()}`.replace('× vezes', ' vezes'))
+    let lugar = 'Brasil', sublugar = `${f.int(N)} municípios`
+    let idx: number[] = []
+    let contornos = fcUf.features
+    let destaque: Feature<Geometry> | null = null
+    if (s.tipo === 'br') idx = [...Array(N).keys()]
+    else {
+      const uf = s.tipo === 'uf' ? s.uf : mapa.ufs[s.i]
+      // Fernando de Noronha fica longe da costa e encolhe o mapa de PE; só entra se for o município escolhido
+      idx = [...Array(N).keys()].filter((i) => mapa.ufs[i] === uf && (mapa.cods[i] !== 2605459 || (s.tipo === 'mun' && s.i === i)))
+      contornos = fcUf.features.filter((ft) => UF_COD[ft.properties.codarea] === uf)
+      if (s.tipo === 'uf') { lugar = UF_NOME[uf]; sublugar = `${f.int(idx.length)} municípios` }
+      else {
+        lugar = mapa.nomes[s.i]; sublugar = UF_NOME[uf]; destaque = muns[s.i]
+        const v = valorMun(s.i)
+        if (v != null) {
+          const vs = idx.map((i) => valorMun(i)).filter((x): x is number => x != null).sort((a, b) => b - a)
+          destaques.unshift(`${vs.indexOf(v) + 1}º de ${vs.length} em ${UF_NOME[uf]} (1º = mais falta de água)`)
+        }
+      }
+    }
+    const leg = $('#legenda')
+    let foto: { img: HTMLImageElement; credito: string } | null = null
+    if (s.tipo === 'mun') {
+      const arq = await arquivoFoto(mapa.cods[s.i])
+      if (arq) {
+        const [img0, cr] = await Promise.all([carregarImagem(urlFoto(arq, 1280)), creditoFoto(arq)])
+        const img = img0 ?? (await carregarImagem(urlOriginal(arq)))
+        if (img) foto = { img, credito: `Foto: ${cr.autor}${cr.licenca ? ` · ${cr.licenca}` : ''} · Wikimedia Commons` }
+      }
+    }
+    // na cidade, o mapa do card é um zoom nos arredores (vale também para vizinhos de outro estado)
+    if (s.tipo === 'mun') { idx = [...Array(N).keys()]; contornos = fcUf.features }
+    const opts: CardOpts = {
+      marca: 'minhainfra · água', icone: 'gota', lugar, sublugar, numero, unidade, frase, periodo, destaques,
+      legenda: {
+        titulo: leg.querySelector('.tit')?.textContent?.trim() ?? '',
+        cores: [...leg.querySelectorAll<HTMLElement>('.esc span')].map((x) => x.style.background),
+        rotulos: [...leg.querySelectorAll('.rot span')].slice(1).map((x) => x.textContent ?? ''),
+      },
+      mapa: { feats: idx.map((i) => muns[i]), cores: idx.map((i) => cor(valorMun(i))), destaque, contornos, zoom: s.tipo === 'mun' },
+      url: location.host.includes('localhost') ? 'minhainfra.com/agua' : `${location.host}${location.pathname}`.replace(/\/$/, ''),
+      fonte: 'Fonte: SNIS e SINISA',
+    }
+    // duas versões quando há foto: com a foto da cidade ou com o mapa
+    const versoes = foto
+      ? [{ rotulo: 'Com foto', cv: await desenharCard({ ...opts, foto }) }, { rotulo: 'Com mapa', cv: await desenharCard({ ...opts, foto: null }) }]
+      : [{ rotulo: 'Com mapa', cv: await desenharCard({ ...opts, foto: null }) }]
+    const slug = f.semAcento(lugar).replace(/[^a-z0-9]+/g, '-')
+    abrirCompartilhar(versoes, `minhainfra-agua-${slug}.png`, location.href, `${numero}${unidade === '×' ? '×' : ' ' + unidade} ${frase}, ${periodo}.`)
+  }
+  $('#btn-compartilhar').addEventListener('click', () => { compartilhar().catch((e) => console.error(e)) })
 
   // ---------- teclado ----------
   document.addEventListener('keydown', (e) => {

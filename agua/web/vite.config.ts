@@ -1,4 +1,4 @@
 import { defineConfig } from 'vite'
 
-// caminhos relativos: o mesmo build funciona em minhainfra.com/energia/ e em <usuario>.github.io/<repo>/energia/
-export default defineConfig({ base: './' })
+// Build: caminhos relativos. Dev: servido em /agua/ (o servidor da energia, porta 5287, repassa /agua para cá).
+export default defineConfig(({ command }) => ({ base: command === 'serve' ? '/agua/' : './' }))

@@ -15,7 +15,7 @@
   --sombra: 0 1px 2px rgba(20, 18, 15, 0.05), 0 8px 24px -12px rgba(20, 18, 15, 0.12);
   --glass: rgba(250, 249, 246, 0.94);
 
-  /* rampa sequencial de um tom (âmbar), claro = pouco tempo sem luz */
+  /* rampa sequencial de um tom (âmbar), claro = pouco tempo sem energia */
   --m0: #efe8dc;
   --m1: #f8dcae;
   --m2: #f5bd6c;
@@ -451,3 +451,26 @@ a { color: inherit; }
   #camada button, #janela button { padding: 5px 10px; font-size: 13px; }
   #camada .longo { display: none; }
 }
+
+/* ---------- compartilhar ---------- */
+.pill.compart { gap: 7px; }
+.pill.compart svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.compartilhar-caixa { width: min(560px, calc(100vw - 32px)); }
+.compartilhar-caixa h2 { margin-top: 0; }
+.compartilhar-previa img { display: block; width: 100%; max-height: 56vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--line-2); background: var(--panel-2); }
+.compartilhar-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.compartilhar-acoes .pill { cursor: pointer; }
+.compartilhar-acoes .pill.principal { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+@media (max-width: 760px) {
+  .pill.compart { display: inline-flex; width: 34px; padding: 0; }
+  .pill.compart .longo { display: none; }
+}
+
+/* foto da cidade (Wikimedia Commons) no topo da ficha */
+.foto { margin: -16px calc(-1 * var(--pad)) 14px; position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r) var(--r) 0 0; background: var(--panel-2); }
+.foto:empty { display: none; }
+.foto img { width: 100%; height: 100%; object-fit: cover; display: block; animation: entra 0.5s var(--ease-out) both; }
+.foto figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 6px; font-size: 10px; line-height: 1.3; background: linear-gradient(transparent, rgba(0, 0, 0, 0.55)); }
+.foto figcaption a { color: rgba(255, 255, 255, 0.92); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.foto figcaption a:hover { text-decoration: underline; }
+.compartilhar-versoes { display: inline-flex; margin-bottom: 12px; }

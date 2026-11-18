@@ -3,25 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>semluz · quanto tempo o Brasil fica sem energia</title>
+    <title>semenergia · quanto tempo o Brasil fica sem energia</title>
     <meta name="description" content="Mapa e histórico das interrupções de energia elétrica no Brasil, município por município, com dados abertos da ANEEL." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2 4 14h7l-1 8 9-12h-7z' fill='%23E8A317'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet" />
     <script>
-      try { const t = localStorage.getItem('semluz-tema'); if (t) document.documentElement.dataset.theme = t } catch {}
+      try { const t = localStorage.getItem('minhainfra-tema'); if (t) document.documentElement.dataset.theme = t } catch {}
     </script>
   </head>
   <body>
     <div id="app" class="hud carregando">
       <header class="topo">
-        <a class="logo" href="./" aria-label="semluz, início">
+        <a class="logo" href="../" aria-label="minhainfra, início">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg>
-          <span>semluz</span>
+          <span>semenergia</span>
         </a>
         <nav class="seg" id="camada" aria-label="O que o mapa mostra">
-          <button data-c="horas" class="on">Horas<span class="longo"> sem luz</span></button>
+          <button data-c="horas" class="on">Horas<span class="longo"> sem energia</span></button>
           <button data-c="limite">Limite<span class="longo"> ANEEL</span></button>
         </nav>
         <nav class="seg" id="janela" aria-label="Período">
@@ -31,6 +31,9 @@
         <div class="topo-dir">
           <button class="ico" id="btn-busca" aria-label="Buscar município (Ctrl+K)">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          </button>
+          <button class="pill compart" id="btn-compartilhar" aria-label="Compartilhar">
+            <svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg><span class="longo">Compartilhar</span>
           </button>
           <button class="pill" id="btn-metodo">Como medimos</button>
           <button class="ico" id="btn-tema" aria-label="Alternar tema">

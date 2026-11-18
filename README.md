@@ -2,7 +2,7 @@
 
 A infraestrutura da sua cidade em dados abertos.
 
-- `energia/`: horas sem luz por município (ANEEL), limites e compensações. Ver `energia/README.md`.
+- `energia/`: horas sem energia por município (ANEEL), limites e compensações. Ver `energia/README.md`.
 - `agua/`: falta de água no abastecimento (SNIS e SINISA). Ver `agua/README.md`.
 - `site/`: página inicial.
 
