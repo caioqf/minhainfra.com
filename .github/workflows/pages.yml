@@ -32,10 +32,12 @@ jobs:
           mkdir -p _site
           cp -r site/. _site/
           cp -r energia/web/dist _site/energia
-          if [ -f agua/web/package.json ]; then
-            (cd agua/web && npm ci && npm run build)
-            cp -r agua/web/dist _site/agua
-          fi
+          for secao in agua esgoto saude; do
+            if [ -f $secao/web/package.json ]; then
+              (cd $secao/web && npm ci && npm run build)
+              cp -r $secao/web/dist _site/$secao
+            fi
+          done
           echo "minhainfra.com" > _site/CNAME
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3

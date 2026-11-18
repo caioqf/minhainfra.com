@@ -454,8 +454,7 @@ a { color: inherit; }
 
 /* ---------- água ---------- */
 .uf-mini { font-size: 10px; color: var(--fg-3); font-weight: 500; }
-.anos span.quebra { color: var(--luz-ink); font-weight: 600; }
-.anos span.quebra::before { content: ""; position: absolute; left: 50%; top: -14px; width: 1px; height: 10px; background: var(--luz-ink); }
+.anos i.quebra { position: absolute; top: -15px; height: 26px; border-left: 1px dashed var(--fg-4); cursor: help; }
 
 /* ---------- compartilhar ---------- */
 .pill.compart { gap: 7px; }
@@ -479,3 +478,25 @@ a { color: inherit; }
 .foto figcaption a { color: rgba(255, 255, 255, 0.92); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .foto figcaption a:hover { text-decoration: underline; }
 .compartilhar-versoes { display: inline-flex; margin-bottom: 12px; }
+.aviso-mapa { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 340px; padding: 14px 16px; border-radius: 12px; background: var(--glass); border: 1px solid var(--line-2); box-shadow: var(--sombra); font-size: 13px; line-height: 1.45; text-align: center; }
+.aviso-mapa b { display: block; font-size: 14px; margin-bottom: 4px; }
+.aviso-mapa button { margin-top: 10px; border: 1px solid var(--line-2); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-weight: 500; cursor: pointer; }
+.aviso-mapa[hidden] { display: none; }
+
+/* ---------- abas entre as seções ---------- */
+.secoes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
+.secoes a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 9px; border-radius: 999px; text-decoration: none; color: var(--fg-3); font-weight: 500; transition: background-color 0.15s, color 0.15s; }
+.secoes a:hover { color: var(--fg); }
+.secoes a.on { background: var(--panel); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-2); }
+.secoes svg { width: 16px; height: 16px; flex-shrink: 0; }
+.secoes a:not(.on) svg { opacity: 0.75; }
+.logo { font-size: 19px; }
+@media (max-width: 1280px) { .secoes a:not(.on) span { display: none; } .secoes a:not(.on) { padding: 5px 8px; } }
+@media (max-width: 760px) { .secoes a span { display: none; } .secoes a, .secoes a.on { padding: 5px 9px; } }
+/* topo cheio em telas médias: nada quebra linha; textos longos viram curtos */
+.seg button, .pill, .secoes a { white-space: nowrap; }
+@media (max-width: 1280px) {
+  #camada .longo, .pill.compart .longo { display: none; }
+  .pill.compart { width: 34px; padding: 0; }
+  .topo { gap: 12px; }
+}

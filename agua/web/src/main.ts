@@ -8,6 +8,7 @@ import { barras } from './graficos'
 import { desenharCard, abrirCompartilhar, type CardOpts } from './card'
 import { arquivoFoto, carregarImagem, creditoFoto, preencherFoto, urlFoto, urlOriginal } from './foto'
 import * as f from './fmt'
+import { montarSecoes } from './secoes'
 
 type Sel = { tipo: 'br' } | { tipo: 'uf'; uf: string } | { tipo: 'mun'; i: number }
 type Props = { codarea: string }
@@ -15,6 +16,7 @@ type Camada = 'horas' | 'vezes' | 'rodizio'
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!
 const app = $('#app')
+montarSecoes('agua')
 const PEQUENOS = ['RN', 'PB', 'PE', 'AL', 'SE', 'ES', 'RJ', 'DF']
 
 // faixas de cor (7 cores, --m0 a --m6) e textos de cada camada
@@ -101,6 +103,8 @@ async function iniciar() {
     cor,
     rotuloUf: (uf) => { const v = valorUf(uf); return v == null ? null : fmtV(v) },
     onHover: (i, x, y) => mostrarTip(i, x, y),
+    onHoverUf: (uf, x, y) => mostrarTipUf(uf, x, y),
+    onClickUf: (uf) => selecionar({ tipo: 'uf', uf }, true),
     onClick: (i) => { if (i != null) selecionar({ tipo: 'mun', i }, true) },
     comChips: () => !pequeno(),
     nomeMun: (i) => mapa.nomes[i],
@@ -121,6 +125,24 @@ async function iniciar() {
     if (semDuracao()) return `Em ${ano()} o SINISA não publicou a duração das paralisações. Veja "Vezes sem água".`
     if (suspeito.has(`${i}:${st.t}`)) return 'O dado informado é inconsistente (mais faltas que o possível no ano) e ficou de fora.'
     return 'O município não informou paralisações ao SNIS/SINISA neste ano.'
+  }
+
+  // estado sob o mouse: nome, valor e o convite para clicar
+  function mostrarTipUf(uf: string | null, x: number, y: number) {
+    if (uf == null) { tip.classList.remove('on'); return }
+    const v = valorUf(uf)
+    const per = ano()
+    const num = v == null ? '–' : fmtV(v)
+    const rot = `${C().curto} por ligação`
+    tip.innerHTML = `<div class="t">${UF_NOME[uf]}</div><div class="s">${per}</div><div class="v">${num}<small>${rot}</small></div><div class="aviso">Clique para ver as cidades</div>`
+    const pw = palco.clientWidth, ph = palco.clientHeight
+    const tw = tip.offsetWidth || 240, th = tip.offsetHeight || 130
+    let tx = x + 16, ty = y - th / 2
+    if (tx + tw > pw - 10) tx = x - tw - 16
+    ty = Math.max(10, Math.min(ph - th - 80, ty))
+    tip.style.left = `${tx}px`
+    tip.style.top = `${ty}px`
+    tip.classList.add('on')
   }
 
   function mostrarTip(i: number | null, x: number, y: number) {
@@ -181,9 +203,12 @@ async function iniciar() {
     slider.min = '0'
     slider.max = String(ultimo)
     slider.value = String(st.t)
+    // um rótulo a cada 2 anos (15 anos lado a lado ficam colados); a troca SNIS → SINISA vira só um traço discreto
+    const pos = (j: number) => (j / ultimo) * 100
+    const iq = anos.indexOf(meta.quebra)
     $('#anos').innerHTML = anos
-      .map((a, j) => (pequeno() && j % 2 ? '' : `<span style="left:${(j / ultimo) * 100}%"${a === meta.quebra ? ' class="quebra" title="A partir de 2023 os dados vêm do SINISA, com outro questionário"' : ''}>${pequeno() ? String(a).slice(2) : a}</span>`))
-      .join('')
+      .map((a, j) => ((ultimo - j) % 2 ? '' : `<span style="left:${pos(j)}%">${pequeno() ? String(a).slice(2) : a}</span>`))
+      .join('') + (iq > 0 ? `<i class="quebra" style="left:${(pos(iq - 1) + pos(iq)) / 2}%" title="Até ${meta.quebra - 1} os dados vêm do SNIS; a partir de ${meta.quebra}, do SINISA, com outro questionário"></i>` : '')
   }
   slider.addEventListener('input', () => { parar(); mudarT(+slider.value) })
   $('#btn-ultimo').addEventListener('click', () => { parar(); mudarT(ultimo) })
@@ -202,8 +227,20 @@ async function iniciar() {
     st.tocando = window.setInterval(() => { if (st.t >= ultimo) parar(); else mudarT(st.t + 1) }, 700)
   })
 
+  // aviso no meio do mapa quando a camada escolhida não existe no ano (SINISA 2023 não publicou a duração)
+  const aviso = document.createElement('div')
+  aviso.className = 'aviso-mapa'
+  aviso.hidden = true
+  palco.appendChild(aviso)
+  aviso.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('button')) mudarCamada('vezes') })
+  function atualizarAviso() {
+    aviso.hidden = !semDuracao()
+    if (!aviso.hidden) aviso.innerHTML = `<b>${ano()} não tem horas sem água</b>Neste ano o SINISA não publicou quanto duraram as paralisações, só quantas foram e quantas ligações atingiram.<br><button>Ver "Vezes sem água" em ${ano()}</button>`
+  }
+
   function mudarT(t: number) {
     st.t = t
+    atualizarAviso()
     slider.value = String(t)
     $('#tempo-rotulo').innerHTML = `${anos[t]}<small>${anos[t] >= meta.quebra ? 'SINISA' : 'SNIS'}</small>`
     $('#btn-ultimo').classList.toggle('on', t === ultimo)

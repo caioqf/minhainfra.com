@@ -3,10 +3,16 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 // Build: caminhos relativos (funciona em minhainfra.com/energia/ e em <usuario>.github.io/<repo>/energia/).
-// Dev: imita o site publicado num só endereço: / = página inicial, /energia/ = este app, /agua/ = servidor da água (porta 5288).
+// Dev: imita o site publicado num só endereço: / = página inicial, /energia/ = este app, /agua/, /saude/ e /esgoto/ = servidores das outras seções (portas 5288, 5289 e 5290).
 export default defineConfig(({ command }) => ({
   base: command === 'serve' ? '/energia/' : './',
-  server: { proxy: { '/agua': { target: 'http://localhost:5288', ws: true } } },
+  server: {
+    proxy: {
+      '/agua': { target: 'http://localhost:5288', ws: true },
+      '/saude': { target: 'http://localhost:5289', ws: true },
+      '/esgoto': { target: 'http://localhost:5290', ws: true },
+    },
+  },
   plugins: [{
     name: 'pagina-inicial',
     configureServer(server) {

@@ -12,11 +12,11 @@
     <style>
       :root {
         --bg: #f1efe9; --panel: #faf9f6; --line: #e3dfd6; --fg: #171512; --fg-2: #4a463f; --fg-3: #7b766c;
-        --luz: #e8a317; --agua: #2f7fa3;
+        --luz: #e8a317; --agua: #2f7fa3; --esgoto: #8a6a2f; --saude: #2e9a5e;
         color-scheme: light;
       }
       @media (prefers-color-scheme: dark) {
-        :root { --bg: #12110f; --panel: #1b1a17; --line: #2c2a26; --fg: #f2efe8; --fg-2: #c9c4b9; --fg-3: #8d877c; --agua: #5fb0d4; color-scheme: dark; }
+        :root { --bg: #12110f; --panel: #1b1a17; --line: #2c2a26; --fg: #f2efe8; --fg-2: #c9c4b9; --fg-3: #8d877c; --agua: #5fb0d4; --esgoto: #d1a85a; --saude: #5cc58a; color-scheme: dark; }
       }
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--fg); font: 400 15px/1.5 Geist, system-ui, sans-serif; display: grid; place-items: center; padding: 32px 16px; }
@@ -24,7 +24,8 @@
       h1 { font: 300 clamp(34px, 6vw, 56px)/1.05 Newsreader, Georgia, serif; letter-spacing: -0.02em; margin: 0 0 14px; }
       .marca { font: 400 20px/1 Newsreader, Georgia, serif; color: var(--fg-2); margin-bottom: 40px; }
       p.lead { color: var(--fg-2); font-size: 17px; max-width: 560px; margin: 0 0 40px; }
-      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+      .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+      @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
       a.card { display: block; text-decoration: none; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px; transition: transform 0.2s, border-color 0.2s; }
       a.card:hover { transform: translateY(-2px); border-color: var(--fg-3); }
       .card .ico { width: 30px; height: 30px; margin-bottom: 22px; }
@@ -39,7 +40,7 @@
     <main>
       <div class="marca">minhainfra</div>
       <h1>A infraestrutura da sua cidade, em dados abertos.</h1>
-      <p class="lead">Quanto tempo falta luz e água onde você mora, comparado com o resto do país e com o que as regras exigem.</p>
+      <p class="lead">Energia, água, esgoto e saúde onde você mora, comparados com o resto do país e com o que as regras exigem.</p>
       <div class="cards">
         <a class="card" href="energia/">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="var(--luz)" /></svg>
@@ -53,8 +54,20 @@
           <p>Horas e vezes sem água em cada município desde 2010, com rodízio, perdas e o prestador responsável.</p>
           <div class="ir">Ver o mapa →</div>
         </a>
+        <a class="card" id="esgoto" href="esgoto/">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c1 1.1 1.5 2.3 1.2 3.4 1.5.3 2.6 1.3 2.6 2.7l-.1.5c1.6.3 2.8 1.5 2.8 3l-.1.6c1.6.4 2.6 1.6 2.6 3.1 0 2-1.8 3.7-4 3.7H7c-2.2 0-4-1.7-4-3.7 0-1.5 1-2.7 2.6-3.1l-.1-.6c0-1.5 1.2-2.7 2.8-3l-.1-.5c0-1.6 1.5-2.8 3.3-2.8.7-.9.9-2 .5-3.3zM9.6 12.4a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2zm4.8 0a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2zM9.3 16.1c.7.8 1.6 1.2 2.7 1.2s2-.4 2.7-1.2z" fill="var(--esgoto)" fill-rule="evenodd" /></svg>
+          <h2>Esgoto</h2>
+          <p>Quem tem rede e tratamento de esgoto em cada município desde 2010, e para onde vai o esgoto segundo o Censo 2022.</p>
+          <div class="ir">Ver o mapa →</div>
+        </a>
+        <a class="card" id="saude" href="saude/">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4a1 1 0 0 1 1 1v5h5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-5v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-5H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h5V4a1 1 0 0 1 1-1z" fill="var(--saude)" /></svg>
+          <h2>Saúde</h2>
+          <p>Leitos, UTI, médicos e tomógrafos por habitante em cada município desde 2010, e onde não há nenhum.</p>
+          <div class="ir">Ver o mapa →</div>
+        </a>
       </div>
-      <footer>Dados públicos da ANEEL e do Sistema Nacional de Informações sobre Saneamento.</footer>
+      <footer>Dados oficiais da ANEEL, do Ministério das Cidades (SNIS e SINISA), do Ministério da Saúde (DATASUS) e do IBGE.</footer>
     </main>
   </body>
 </html>

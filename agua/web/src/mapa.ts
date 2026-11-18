@@ -11,6 +11,9 @@ export interface MapaOpts {
   rotuloUf: (uf: string) => string | null
   onHover: (i: number | null, x: number, y: number) => void
   onClick: (i: number | null) => void
+  /** com estes dois, o mapa seleciona o estado inteiro até haver zoom suficiente para escolher cidade */
+  onHoverUf?: (uf: string | null, x: number, y: number) => void
+  onClickUf?: (uf: string) => void
   /** estados pequenos ganham chip lateral em vez de rótulo no mapa */
   comChips: () => boolean
   /** nome e importância (consumidores) do município, para os rótulos no zoom */
@@ -38,6 +41,7 @@ export class Mapa {
   private vista: Vista = { k: 1, x: 0, y: 0 }
   private anim = 0
   private hover: number | null = null
+  private hoverUf: string | null = null
   private sel: number | null = null
   ufFoco: string | null = null
   private cores: Record<string, string> = {}
@@ -269,6 +273,22 @@ export class Mapa {
       ctx.lineWidth = 1.6 / vista.k
       ctx.stroke(this.ufPaths.get(foco)!)
     }
+    // estado sob o mouse (modo de escolher estado)
+    if (this.hoverUf) {
+      const p = this.ufPaths.get(this.hoverUf)
+      if (p) {
+        ctx.fillStyle = this.cores['--fg']
+        ctx.globalAlpha = 0.08
+        ctx.fill(p)
+        ctx.globalAlpha = 1
+        ctx.lineWidth = 4 / vista.k
+        ctx.strokeStyle = this.cores['--panel']
+        ctx.stroke(p)
+        ctx.lineWidth = 2 / vista.k
+        ctx.strokeStyle = this.cores['--fg']
+        ctx.stroke(p)
+      }
+    }
     // seleção e hover
     for (const [i, lw] of [[this.sel, 2.4], [this.hover, 1.8]] as [number | null, number][]) {
       if (i == null) continue
@@ -352,6 +372,31 @@ export class Mapa {
     ctx.globalAlpha = 1
   }
 
+  /** estado sob o ponto da tela */
+  private acertarUf(sx: number, sy: number): string | null {
+    const px = (sx - this.vista.x) / this.vista.k
+    const py = (sy - this.vista.y) / this.vista.k
+    const { ctx } = this
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    let achou: string | null = null
+    for (const [uf, b] of this.ufCaixas) {
+      if (px < b[0][0] || px > b[1][0] || py < b[0][1] || py > b[1][1]) continue
+      if (ctx.isPointInPath(this.ufPaths.get(uf)!, px, py)) { achou = uf; break }
+    }
+    ctx.restore()
+    return achou
+  }
+
+  /** cidade só é escolhida dentro do estado em foco ou com zoom; fora disso, o clique pega o estado inteiro */
+  private modoEstado(sx: number, sy: number): string | null {
+    if (!this.o.onClickUf) return null
+    const uf = this.acertarUf(sx, sy)
+    if (!uf) return null
+    if (this.ufFoco === uf || this.vista.k >= 3) return null
+    return uf
+  }
+
   private acertar(sx: number, sy: number): number | null {
     const px = (sx - this.vista.x) / this.vista.k
     const py = (sy - this.vista.y) / this.vista.k
@@ -414,6 +459,14 @@ export class Mapa {
         }
       }
       if (e.pointerType === 'touch') return
+      const uf = this.modoEstado(x, y)
+      if (uf) {
+        if (uf !== this.hoverUf || this.hover != null) { this.hoverUf = uf; this.hover = null; this.desenhar() }
+        c.style.cursor = 'pointer'
+        this.o.onHoverUf?.(uf, x, y)
+        return
+      }
+      if (this.hoverUf) { this.hoverUf = null; this.desenhar() }
       const i = this.acertar(x, y)
       if (i !== this.hover) { this.hover = i; this.desenhar() }
       c.style.cursor = i == null ? (this.vista.k > 1 ? 'grab' : 'default') : 'pointer'
@@ -433,6 +486,13 @@ export class Mapa {
       this.arrasto = null
       if (cancelou || moveu) return
       const [x, y] = pos(e)
+      const uf = this.modoEstado(x, y)
+      if (uf) {
+        this.hoverUf = null
+        this.o.onHover(null, 0, 0)
+        this.o.onClickUf!(uf)
+        return
+      }
       const i = this.acertar(x, y)
       if (e.pointerType === 'touch') this.o.onHover(i, x, y)
       this.o.onClick(i)
@@ -442,6 +502,7 @@ export class Mapa {
     c.addEventListener('pointerleave', (e) => {
       if (e.pointerType === 'touch') return
       this.hover = null
+      this.hoverUf = null
       this.desenhar()
       this.o.onHover(null, 0, 0)
     })

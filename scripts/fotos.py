@@ -28,7 +28,7 @@ for b in sorted(linhas, key=lambda b: b["img"]["value"]):
         nome = arq.replace(" ", "_")
         h = hashlib.md5(nome.encode()).hexdigest()
         fotos[cod] = f"{h[0]}/{h[:2]}/{nome}"
-for site in ("energia", "agua"):
+for site in ("energia", "agua", "esgoto", "saude"):
     destino = ROOT / site / "web" / "public" / "data" / "fotos.json"
     destino.write_text(json.dumps(fotos, ensure_ascii=False, separators=(",", ":")))
 print(len(linhas), "fotos no Wikidata;", len(fotos), "municípios com foto aproveitável")

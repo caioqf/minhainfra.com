@@ -8,12 +8,14 @@ import { barras } from './graficos'
 import { desenharCard, abrirCompartilhar, type CardOpts } from './card'
 import { arquivoFoto, carregarImagem, creditoFoto, preencherFoto, urlFoto, urlOriginal } from './foto'
 import * as f from './fmt'
+import { montarSecoes } from './secoes'
 
 type Sel = { tipo: 'br' } | { tipo: 'uf'; uf: string } | { tipo: 'mun'; i: number }
 type Props = { codarea: string }
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector<T>(s)!
 const app = $('#app')
+montarSecoes('energia')
 
 // faixas da escala (horas por consumidor); 7 cores, de --m0 a --m6
 const FAIXAS: Record<number, number[]> = { 12: [8, 12, 20, 32, 50, 80], 1: [0.5, 1, 2, 4, 8, 16] }
@@ -109,6 +111,8 @@ async function iniciar() {
     cor,
     rotuloUf: (uf) => { const v = valorUfC(uf); return v == null ? null : fmtC(v) },
     onHover: (i, x, y) => mostrarTip(i, x, y),
+    onHoverUf: (uf, x, y) => mostrarTipUf(uf, x, y),
+    onClickUf: (uf) => selecionar({ tipo: 'uf', uf }, true),
     onClick: (i) => {
       if (i == null) return
       const uf = mapa.ufs[i]
@@ -130,6 +134,24 @@ async function iniciar() {
     },
     margem: pequeno() ? { t: 64, r: 8, b: 120, l: 8 } : { t: 46, r: 96, b: 84, l: 24 },
   })
+
+  // estado sob o mouse: nome, valor e o convite para clicar
+  function mostrarTipUf(uf: string | null, x: number, y: number) {
+    if (uf == null) { tip.classList.remove('on'); return }
+    const v = valorUfC(uf)
+    const per = ehLim() || st.janela === 12 ? `12 meses até ${f.mes(mapa.meses[st.t])}` : f.mesLongo(mapa.meses[st.t])
+    const num = v == null ? '–' : ehLim() ? `${f.int(v)}%` : f.horasNum(v)
+    const rot = ehLim() ? 'do limite da ANEEL' : 'horas sem energia por consumidor'
+    tip.innerHTML = `<div class="t">${UF_NOME[uf]}</div><div class="s">${per}</div><div class="v">${num}<small>${rot}</small></div><div class="aviso">Clique para ver as cidades</div>`
+    const pw = palco.clientWidth, ph = palco.clientHeight
+    const tw = tip.offsetWidth || 240, th = tip.offsetHeight || 130
+    let tx = x + 16, ty = y - th / 2
+    if (tx + tw > pw - 10) tx = x - tw - 16
+    ty = Math.max(10, Math.min(ph - th - 80, ty))
+    tip.style.left = `${tx}px`
+    tip.style.top = `${ty}px`
+    tip.classList.add('on')
+  }
 
   function mostrarTip(i: number | null, x: number, y: number) {
     if (i == null) { tip.classList.remove('on'); return }
