@@ -1,0 +1,9 @@
+node_modules/
+dist/
+_site/
+.venv/
+__pycache__/
+**/data/raw/
+**/data/tmp/
+**/data/*.duckdb*
+.DS_Store
