@@ -501,6 +501,26 @@ a { color: inherit; }
   #janela { order: 4; }
 }
 
+/* ---------- celular: topo em linhas fixas ---------- */
+/* 1ª linha: logo e botões; 2ª: abas das seções; 3ª: o que o mapa mostra (e período, se houver) */
+@media (max-width: 760px) {
+  .topo { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; height: auto; padding: 8px 0 2px; }
+  .logo { grid-column: 1; grid-row: 1; }
+  .topo-dir { grid-column: 2; grid-row: 1; margin-left: 0; gap: 6px; justify-self: end; }
+  .secoes { grid-column: 1 / -1; grid-row: 2; }
+  .secoes a, .secoes a.on { flex: 1; justify-content: center; padding: 6px 4px; gap: 5px; font-size: 12.5px; }
+  .secoes a span { display: inline; }
+  #camada { grid-column: 1 / -1; grid-row: 3; order: 0; overflow-x: auto; scrollbar-width: none; }
+  #camada::-webkit-scrollbar { display: none; }
+  #camada button { flex: 1 0 auto; }
+  .topo:has(#janela) #camada { grid-column: 1; }
+  #janela { grid-column: 2; grid-row: 3; order: 0; }
+  .ico { width: 34px; }
+  .palco { height: 58vh; min-height: 380px; }
+}
+.dica-dedos { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 5; padding: 8px 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: 13px; pointer-events: none; animation: dica 0.2s ease-out both; }
+@keyframes dica { from { opacity: 0; } }
+
 /* ---------- troca entre seções sem piscar ---------- */
 /* navegação entre /energia, /agua, /esgoto e /saude com transição animada (View Transitions entre documentos) */
 @view-transition { navigation: auto; }
@@ -522,3 +542,4 @@ a { color: inherit; }
 }
 @keyframes brilho { from { background-position: 150% 0; } to { background-position: -50% 0; } }
 @media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+.logo svg.bandeira { width: 22px; height: 16px; fill: none; animation: none; flex-shrink: 0; }

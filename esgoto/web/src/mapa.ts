@@ -413,13 +413,26 @@ export class Mapa {
     return achou
   }
 
+  private dicaMostrada = false
+  /** aviso rápido no celular: um dedo rola a página, dois dedos movem o mapa */
+  private dicaDedos() {
+    this.dicaMostrada = true
+    const d = document.createElement('div')
+    d.className = 'dica-dedos'
+    d.textContent = 'Use dois dedos para mover o mapa'
+    this.canvas.parentElement?.appendChild(d)
+    setTimeout(() => d.remove(), 1800)
+  }
+
   private eventos() {
     const c = this.canvas
     const pos = (e: PointerEvent | WheelEvent | MouseEvent) => {
       const r = c.getBoundingClientRect()
       return [e.clientX - r.left, e.clientY - r.top] as const
     }
-    const atualizarToque = () => { c.style.touchAction = this.vista.k > 1 ? 'none' : 'pan-y' }
+    // no celular, um dedo sempre rola a página; mover e dar zoom no mapa é com dois dedos
+    const toqueGrosso = matchMedia('(pointer: coarse)').matches
+    const atualizarToque = () => { c.style.touchAction = toqueGrosso || this.vista.k <= 1 ? 'pan-y' : 'none' }
     c.addEventListener('vista', atualizarToque)
     atualizarToque()
 
@@ -451,7 +464,8 @@ export class Mapa {
       if (this.arrasto) {
         const dx = x - this.arrasto.x, dy = y - this.arrasto.y
         if (Math.abs(dx) + Math.abs(dy) > 4) this.arrasto.moveu = true
-        if (this.arrasto.moveu && this.vista.k > 1) {
+        if (this.arrasto.moveu && e.pointerType === 'touch' && this.vista.k > 1 && !this.dicaMostrada && Math.abs(dx) > 30) this.dicaDedos()
+        if (this.arrasto.moveu && this.vista.k > 1 && e.pointerType !== 'touch') {
           this.aplicar(this.limitar({ ...this.vista, x: this.arrasto.vx + dx, y: this.arrasto.vy + dy }))
           c.style.cursor = 'grabbing'
           if (this.hover != null) { this.hover = null; this.o.onHover(null, 0, 0) }
